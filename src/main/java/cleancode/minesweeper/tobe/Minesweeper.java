@@ -13,16 +13,17 @@ public class Minesweeper {
     private int gameStatus = 0; // 0: 게임 중, 1: 승리, -1: 패배
     private static final int LAND_MINE_COUNT = 10;
 
+    private final GameBoard gameBoard = new GameBoard(BOARD_ROW_SIZE, BOARD_COL_SIZE);
     private final ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
     private final ConsoleOutputHandler consoleOutputHandler = new ConsoleOutputHandler();
 
     public void run() {
         consoleOutputHandler.showGameStartComments();
-        initializeGame();
+        gameBoard.initializeGame();
 
         while (true) {
             try {
-                consoleOutputHandler.showBoard(BOARD);
+                consoleOutputHandler.showBoard(gameBoard);
                 //화면에 보드를 띄우고 게임이 진행되니 여기 공백으로 구분해주기
                 if (doesUserWinTheGame()) {
                     consoleOutputHandler.printGameWinningComment();
@@ -52,19 +53,19 @@ public class Minesweeper {
         int selectedColIndex = getSelectedColIndex(cellInput);
 
         if (doesUserChooseToPlantFlag(userActionInput)) {
-            BOARD[selectedRowIndex][selectedColIndex].flag();
+            gameBoard.flag(selectedRowIndex, selectedColIndex);
             checkIfGameIsOver();
             return;
         }
         // 로직 덩어리들을 공백으로 구분해서 가독성 향상시켜주기
         if (doesUserChooseToOpenCell(userActionInput)) {
-            if (isLandMineCell(selectedRowIndex, selectedColIndex)) {
-                BOARD[selectedRowIndex][selectedColIndex].open();
+            if (gameBoard.isLandMineCell(selectedRowIndex, selectedColIndex)) {
+                gameBoard.open(selectedRowIndex, selectedColIndex);
                 changeGameStatusToLose();
                 return;
             }
 
-            open(selectedRowIndex, selectedColIndex);
+            gameBoard.openSurroundedCell(selectedRowIndex, selectedColIndex);
             checkIfGameIsOver();
             return;
         }
@@ -121,39 +122,10 @@ public class Minesweeper {
     }
 
     private void checkIfGameIsOver() {
-        boolean isAllChecked = isAllCellChecked();
+        boolean isAllChecked = gameBoard.isAllCellChecked();
         if (isAllChecked) {
             gameStatus = 1;
         }
-    }
-
-    private boolean isAllCellChecked() {
-        /*
-        boolean isAllOpened = true;
-        for (int row = 0; row < BOARD_ROW_SIZE; row++) {
-            for (int col = 0; col < BOARD_COL_SIZE; col++) {
-                if (BOARD[row][col].equals(CLOSED_CELL_SIGN)) {
-                    isAllOpened = false;
-                }
-            }
-        }
-        return isAllOpened;
-
-         */
-
-        return Arrays.stream(BOARD)
-                .flatMap(Arrays::stream)
-                .allMatch(cell -> cell.isChecked()); //getter로 값을 가져와서 사용하지 않고 예의바르게 객체한테 물어봐
-
-/*        Stream<String[]> stringArrayStream = Arrays.stream(BOARD);
-        Stream<String> stringStream = stringArrayStream.flatMap(stringArray -> {
-            Stream<String> stirngStream2 = Arrays.stream(stringArray);
-            return stirngStream2;
-        });
-
-        return stringStream
-                .noneMatch(cell->cell.equals(CLOSED_CELL_SIGN));*/
-
     }
 
     private int convertColFrom(char cellInputCol) {
@@ -192,92 +164,5 @@ public class Minesweeper {
                 throw new GameException("잘못된 입력입니다");  //에러메시지와 함께 에러 던져주기
 
         }
-    }
-
-    private void initializeGame() {
-        for (int row = 0; row< BOARD_ROW_SIZE; row++) {
-            for (int col = 0; col < BOARD_COL_SIZE; col++) {
-                BOARD[row][col] = Cell.create();
-            }
-        }
-
-        for (int i = 0; i < LAND_MINE_COUNT; i++) {
-            int col = new Random().nextInt(BOARD_COL_SIZE);
-            int row = new Random().nextInt(BOARD_ROW_SIZE);
-            BOARD[row][col].turnOnLanMine();
-        }
-
-        for (int row = 0; row < BOARD_ROW_SIZE; row++) {
-            for (int col = 0; col < BOARD_COL_SIZE; col++) {
-
-                if (isLandMineCell(row, col)) {  //if문 분기를 조건을 역전시켜서 부정연산자를 사용하지않는 방향으로 바꿔줌
-                    continue;
-                }
-                int count = countNearbyMines(row, col);
-                BOARD[row][col].updateNearbyLandMineCount(count);
-            }
-        }
-    }
-
-    private int countNearbyMines(int row, int col) {
-        int count = 0; //사용할 변수는 쓰는 곳 가까이 선언하기
-        if (row - 1 >= 0 && col - 1 >= 0 && isLandMineCell(row - 1, col - 1)) {
-            count++;
-        }
-        if (row - 1 >= 0 && isLandMineCell(row - 1, col)) {
-            count++;
-        }
-        if (row - 1 >= 0 && col + 1 < BOARD_COL_SIZE && isLandMineCell(row - 1, col + 1)) {
-            count++;
-        }
-        if (col - 1 >= 0 && isLandMineCell(row, col - 1)) {
-            count++;
-        }
-        if (col + 1 < BOARD_COL_SIZE && isLandMineCell(row, col + 1)) {
-            count++;
-        }
-        if (row + 1 < BOARD_ROW_SIZE && col - 1 >= 0 && isLandMineCell(row + 1, col - 1)) {
-            count++;
-        }
-        if (row + 1 < BOARD_ROW_SIZE && isLandMineCell(row + 1, col)) {
-            count++;
-        }
-        if (row + 1 < BOARD_ROW_SIZE && col + 1 < BOARD_COL_SIZE && isLandMineCell(row + 1, col + 1)) {
-            count++;
-        }
-        return count;
-    }
-
-    private boolean isLandMineCell(int selectedRowIndex, int selectedColIndex) {
-        return BOARD[selectedRowIndex][selectedColIndex].isLandMind();
-    }
-
-    private void open(int row, int col) {
-        if (row < 0 || row >= BOARD_ROW_SIZE || col < 0 || col >= BOARD_COL_SIZE) {
-            return;
-        }
-        if (BOARD[row][col].isOpened()) {
-            return;
-        }
-        if (isLandMineCell(row, col)) {
-            return;
-        }
-
-        BOARD[row][col].open();
-
-        if (BOARD[row][col].hasLandMineCount()) {
-            //BOARD[row][col] = Cell.ofNearbyLandMineCount(LAND_MINE_COUNTS[row][col]);
-            return;
-        }
-
-
-        open(row - 1, col - 1);
-        open(row - 1, col);
-        open(row - 1, col + 1);
-        open(row, col - 1);
-        open(row, col + 1);
-        open(row + 1, col - 1);
-        open(row + 1, col);
-        open(row + 1, col + 1);
     }
 }
