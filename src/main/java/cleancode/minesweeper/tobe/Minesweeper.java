@@ -4,34 +4,32 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
 
-public class MinesweeperGame {
-
+public class Minesweeper {
     public static final int BOARD_ROW_SIZE = 8;
     public static final int BOARD_COL_SIZE = 10;
-    public static final String FLAG_SIGN = "⚑";
-    public static final String LAND_MINE_SIGN = "☼";
-    public static final String CLOSED_CELL_SIGN = "□";
-    public static final String OPENED_CELL_SIGN = "■";
     public static final Scanner SCANNER = new Scanner(System.in);
-    private static final String[][] BOARD = new String[BOARD_ROW_SIZE][BOARD_COL_SIZE];
-    private static final Integer[][] LAND_MINE_COUNTS = new Integer[BOARD_ROW_SIZE][BOARD_COL_SIZE];
-    private static final boolean[][] LAND_MINES = new boolean[BOARD_ROW_SIZE][BOARD_COL_SIZE];
-    private static int gameStatus = 0; // 0: 게임 중, 1: 승리, -1: 패배
+    //private static final String[][] BOARD = new String[BOARD_ROW_SIZE][BOARD_COL_SIZE];
+    private static final Cell[][] BOARD = new Cell[BOARD_ROW_SIZE][BOARD_COL_SIZE];
+    private int gameStatus = 0; // 0: 게임 중, 1: 승리, -1: 패배
+    private static final int LAND_MINE_COUNT = 10;
 
-    public static void main(String[] args) {
-        showGameStartComments();
+    private final ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
+    private final ConsoleOutputHandler consoleOutputHandler = new ConsoleOutputHandler();
+
+    public void run() {
+        consoleOutputHandler.showGameStartComments();
         initializeGame();
 
         while (true) {
             try {
-                showBoard();
+                consoleOutputHandler.showBoard(BOARD);
                 //화면에 보드를 띄우고 게임이 진행되니 여기 공백으로 구분해주기
                 if (doesUserWinTheGame()) {
-                    System.out.println("지뢰를 모두 찾았습니다. GAME CLEAR!");
+                    consoleOutputHandler.printGameWinningComment();
                     break;
                 }
                 if (doesUserLoseTheGame()) {
-                    System.out.println("지뢰를 밟았습니다. GAME OVER!");
+                    consoleOutputHandler.printGameLosingComment();
                     break;
                 }
                 //Scanner scanner = new Scanner(System.in); //사용하는 쪽과 가깝게 두기 근데 이러면 반복문 돌 때 마다 새로 다시 생성하게됨. 상수로 빼주기
@@ -40,28 +38,28 @@ public class MinesweeperGame {
                 String userActionInput = getUserActionInputFromUser();
                 actOnCell(cellInput, userActionInput);
 
-            } catch (AppException e) {
-                System.out.println(e.getMessage()); //우리 서비스의 정책 혹은 기획에 위반되는 상황 발생
+            } catch (GameException e) {
+                consoleOutputHandler.printExceptionMessage(e);
             } catch (Exception e) {
-                System.out.println("예상치 못한 프로그램의 문제가 발생했습니다"); //개발자가 의도치않은 시스템 장애 발생1
+                consoleOutputHandler.printSimpleMessage("의도치 않은 문제 발생"); //개발자가 의도치않은 시스템 장애 발생1
             }
-
         }
     }
 
-    private static void actOnCell(String cellInput, String userActionInput) {
+    private void actOnCell(String cellInput, String userActionInput) {
+
         int selectedRowIndex = getSelectedRowIndex(cellInput);
         int selectedColIndex = getSelectedColIndex(cellInput);
 
         if (doesUserChooseToPlantFlag(userActionInput)) {
-            BOARD[selectedRowIndex][selectedColIndex] = FLAG_SIGN;
+            BOARD[selectedRowIndex][selectedColIndex].flag();
             checkIfGameIsOver();
             return;
         }
         // 로직 덩어리들을 공백으로 구분해서 가독성 향상시켜주기
         if (doesUserChooseToOpenCell(userActionInput)) {
             if (isLandMineCell(selectedRowIndex, selectedColIndex)) {
-                BOARD[selectedRowIndex][selectedColIndex] = LAND_MINE_SIGN;
+                BOARD[selectedRowIndex][selectedColIndex].open();
                 changeGameStatusToLose();
                 return;
             }
@@ -71,66 +69,65 @@ public class MinesweeperGame {
             return;
         }
         //System.out.println("잘못된 번호를 선택하셨습니다.");
-        throw new AppException("잘못된 번호 선택");
+        throw new GameException("잘못된 번호 선택");
     }
 
-    private static boolean doesUserLoseTheGame() {
+    private boolean doesUserLoseTheGame() {
         return gameStatus == -1;
     }
 
-    private static boolean doesUserWinTheGame() {
+    private boolean doesUserWinTheGame() {
         return gameStatus == 1;
     }
 
-    private static void changeGameStatusToLose() {
+    private void changeGameStatusToLose() {
         gameStatus = -1;
     }
 
-    private static boolean doesUserChooseToOpenCell(String userActionInput) {
+    private boolean doesUserChooseToOpenCell(String userActionInput) {
         return userActionInput.equals("1");
     }
 
-    private static boolean doesUserChooseToPlantFlag(String userActionInput) {
+    private boolean doesUserChooseToPlantFlag(String userActionInput) {
         return userActionInput.equals("2");
     }
 
-    private static int getSelectedRowIndex(String cellInput) {
+    private int getSelectedRowIndex(String cellInput) {
         char cellInputRow =  cellInput.charAt(1);
         return convertRowFrom(cellInputRow);
     }
 
-    private static int convertRowFrom(char cellInputRow) {
+    private int convertRowFrom(char cellInputRow) {
         int rowIndex = Character.getNumericValue(cellInputRow) -1;
         if(rowIndex >= BOARD_ROW_SIZE) {
-            throw new AppException("잘못된 입력입니다");
+            throw new GameException("잘못된 입력입니다");
         }
         return rowIndex;
     }
 
-    private static int getSelectedColIndex(String cellInput) {
+    private int getSelectedColIndex(String cellInput) {
         char cellInputRow = cellInput.charAt(0);
         return convertColFrom(cellInputRow);
     }
-                                                //상수로 뻈으니까 파라미터 개수 줄여주기 복잡도 줄일 수 있다면?
-    private static String getUserActionInputFromUser() {
-        System.out.println("선택한 셀에 대한 행위를 선택하세요. (1: 오픈, 2: 깃발 꽂기)");
-        return SCANNER.nextLine();
+    //상수로 뻈으니까 파라미터 개수 줄여주기 복잡도 줄일 수 있다면?
+    private String getUserActionInputFromUser() {
+        consoleOutputHandler.printCommentForUserAction();
+        return consoleInputHandler.getUserInput();
     }
 
-    private static String getCellInputFromUser() {
-        System.out.println("선택할 좌표를 입력하세요. (예: a1)");
-        String cellInput = SCANNER.nextLine();
-        return cellInput;
+    private String getCellInputFromUser() {
+        consoleOutputHandler.printCommentForSelectingCell();
+        return consoleInputHandler.getUserInput();
     }
 
-    private static void checkIfGameIsOver() {
-        boolean isAllOpened = isAllCellIsOpened();
-        if (isAllOpened) {
+    private void checkIfGameIsOver() {
+        boolean isAllChecked = isAllCellChecked();
+        if (isAllChecked) {
             gameStatus = 1;
         }
     }
 
-    private static boolean isAllCellIsOpened() {
+    private boolean isAllCellChecked() {
         /*
         boolean isAllOpened = true;
         for (int row = 0; row < BOARD_ROW_SIZE; row++) {
@@ -144,11 +141,9 @@ public class MinesweeperGame {
 
          */
 
-        return Arrays.stream(BOARD)    //Stream<String[]>
-                .flatMap(Arrays::stream)  //Stream<String>
-                //.flatMap(stringArray -> Arrays.stream(stringArray))
-                //.noneMatch(cell -> cell.equals(CLOSED_CELL_SIGN));
-                .noneMatch(cell -> CLOSED_CELL_SIGN.equals(cell)); //cell은 검증되지 않음 값임. 보드에 뭐가 들어가 있을줄 모르잖아. 행여 null 이라면 equals 메서드가 없어서 에러남. 그럼 상수로 선언해서 안전한 객체가 equals를 하도록 하자.
+        return Arrays.stream(BOARD)
+                .flatMap(Arrays::stream)
+                .allMatch(cell -> cell.isChecked()); //getter로 값을 가져와서 사용하지 않고 예의바르게 객체한테 물어봐
 
 /*        Stream<String[]> stringArrayStream = Arrays.stream(BOARD);
         Stream<String> stringStream = stringArrayStream.flatMap(stringArray -> {
@@ -161,7 +156,7 @@ public class MinesweeperGame {
 
     }
 
-    private static int convertColFrom(char cellInputCol) {
+    private int convertColFrom(char cellInputCol) {
         switch (cellInputCol) {
             case 'a':
                 return 0;
@@ -194,48 +189,37 @@ public class MinesweeperGame {
                 return 9;
 
             default:
-                throw new AppException("잘못된 입력입니다");  //에러메시지와 함께 에러 던져주기
+                throw new GameException("잘못된 입력입니다");  //에러메시지와 함께 에러 던져주기
 
         }
     }
 
-    private static void showBoard() {
-        System.out.println("   a b c d e f g h i j");
-        for (int row = 0; row < BOARD_ROW_SIZE; row++) {
-            System.out.printf("%d  ", row + 1);
-            for (int col = 0; col < BOARD_COL_SIZE; col++) {
-                System.out.print(BOARD[row][col] + " ");
-            }
-            System.out.println();
-        }
-        System.out.println();
-    }
-
-    private static void initializeGame() {
+    private void initializeGame() {
         for (int row = 0; row< BOARD_ROW_SIZE; row++) {
             for (int col = 0; col < BOARD_COL_SIZE; col++) {
-                BOARD[row][col] = CLOSED_CELL_SIGN;
+                BOARD[row][col] = Cell.create();
             }
         }
-        for (int i = 0; i < BOARD_COL_SIZE; i++) {
+
+        for (int i = 0; i < LAND_MINE_COUNT; i++) {
             int col = new Random().nextInt(BOARD_COL_SIZE);
             int row = new Random().nextInt(BOARD_ROW_SIZE);
-            LAND_MINES[row][col] = true;
+            BOARD[row][col].turnOnLanMine();
         }
+
         for (int row = 0; row < BOARD_ROW_SIZE; row++) {
             for (int col = 0; col < BOARD_COL_SIZE; col++) {
 
                 if (isLandMineCell(row, col)) {  //if문 분기를 조건을 역전시켜서 부정연산자를 사용하지않는 방향으로 바꿔줌
-                    LAND_MINE_COUNTS[row][col] = 0;
                     continue;
                 }
                 int count = countNearbyMines(row, col);
-                LAND_MINE_COUNTS[row][col] = count;
+                BOARD[row][col].updateNearbyLandMineCount(count);
             }
         }
     }
 
-    private static int countNearbyMines(int row, int col) {
+    private int countNearbyMines(int row, int col) {
         int count = 0; //사용할 변수는 쓰는 곳 가까이 선언하기
         if (row - 1 >= 0 && col - 1 >= 0 && isLandMineCell(row - 1, col - 1)) {
             count++;
@@ -264,32 +248,29 @@ public class MinesweeperGame {
         return count;
     }
 
-    private static boolean isLandMineCell(int selectedRowIndex, int selectedColIndex) {
-        return LAND_MINES[selectedRowIndex][selectedColIndex];
+    private boolean isLandMineCell(int selectedRowIndex, int selectedColIndex) {
+        return BOARD[selectedRowIndex][selectedColIndex].isLandMind();
     }
 
-    private static void showGameStartComments() {
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        System.out.println("지뢰찾기 게임 시작!");
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    }
-
-    private static void open(int row, int col) {
+    private void open(int row, int col) {
         if (row < 0 || row >= BOARD_ROW_SIZE || col < 0 || col >= BOARD_COL_SIZE) {
             return;
         }
-        if (!BOARD[row][col].equals(CLOSED_CELL_SIGN)) {
+        if (BOARD[row][col].isOpened()) {
             return;
         }
         if (isLandMineCell(row, col)) {
             return;
         }
-        if (LAND_MINE_COUNTS[row][col] != 0) {
-            BOARD[row][col] = String.valueOf(LAND_MINE_COUNTS[row][col]);
+
+        BOARD[row][col].open();
+
+        if (BOARD[row][col].hasLandMineCount()) {
+            //BOARD[row][col] = Cell.ofNearbyLandMineCount(LAND_MINE_COUNTS[row][col]);
             return;
-        } else {
-            BOARD[row][col] = OPENED_CELL_SIGN;
         }
+
+
         open(row - 1, col - 1);
         open(row - 1, col);
         open(row - 1, col + 1);
@@ -299,5 +280,4 @@ public class MinesweeperGame {
         open(row + 1, col);
         open(row + 1, col + 1);
     }
-
 }

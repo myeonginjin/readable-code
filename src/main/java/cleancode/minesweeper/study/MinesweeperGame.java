@@ -1,6 +1,6 @@
 package cleancode.minesweeper.study;
 
-import cleancode.minesweeper.tobe.AppException;
+import cleancode.minesweeper.tobe.GameException;
 import cleancode.minesweeper.tobe.Cell;
 
 import java.util.Arrays;
@@ -41,7 +41,7 @@ public class MinesweeperGame {
                 String userActionInput = getUserActionInputFromUser();
                 actOnCell(cellInput, userActionInput);
 
-            } catch (AppException e) {
+            } catch (GameException e) {
                 System.out.println(e.getMessage());
             } catch (Exception e) {
                 System.out.println("예상치 못한 프로그램의 문제가 발생했습니다"); //개발자가 의도치않은 시스템 장애 발생1
@@ -72,7 +72,7 @@ public class MinesweeperGame {
             return;
         }
         //System.out.println("잘못된 번호를 선택하셨습니다.");
-        throw new AppException("잘못된 번호 선택");
+        throw new GameException("잘못된 번호 선택");
     }
 
     private static boolean doesUserLoseTheGame() {
@@ -103,7 +103,7 @@ public class MinesweeperGame {
     private static int convertRowFrom(char cellInputRow) {
         int rowIndex = Character.getNumericValue(cellInputRow) -1;
         if(rowIndex >= BOARD_ROW_SIZE) {
-            throw new AppException("잘못된 입력입니다");
+            throw new GameException("잘못된 입력입니다");
         }
         return rowIndex;
     }
@@ -193,7 +193,7 @@ public class MinesweeperGame {
                 return 9;
 
             default:
-                throw new AppException("잘못된 입력입니다");  //에러메시지와 함께 에러 던져주기
+                throw new GameException("잘못된 입력입니다");  //에러메시지와 함께 에러 던져주기
 
         }
     }
@@ -227,7 +227,6 @@ public class MinesweeperGame {
             for (int col = 0; col < BOARD_COL_SIZE; col++) {
 
                 if (isLandMineCell(row, col)) {  //if문 분기를 조건을 역전시켜서 부정연산자를 사용하지않는 방향으로 바꿔줌
-                    LAND_MINE_COUNTS[row][col] = 0;
                     continue;
                 }
                 int count = countNearbyMines(row, col);
