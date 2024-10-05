@@ -1,35 +1,46 @@
 package cleancode.minesweeper.tobe;
 
+import cleancode.minesweeper.io.*;
+import cleancode.minesweeper.tobe.game.GameInitializable;
 import cleancode.minesweeper.tobe.gameLevel.GameLevel;
+import cleancode.minesweeper.tobe.game.GameRunable;
+import cleancode.minesweeper.tobe.io.InputHandler;
+import cleancode.minesweeper.tobe.io.OutputHandler;
 
-public class Minesweeper {
-    public static final int BOARD_ROW_SIZE = 14;
-    public static final int BOARD_COL_SIZE = 18;
-    private int gameStatus = 0; // 0: 게임 중, 1: 승리, -1: 패배
+
+public class Minesweeper implements GameInitializable, GameRunable {
 
     private final GameBoard gameBoard;
     private final BoardIndexConverter boardIndexConverter = new BoardIndexConverter();
-    private final ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
-    private final ConsoleOutputHandler consoleOutputHandler = new ConsoleOutputHandler();
+    private final InputHandler inputHandler;
+    private final OutputHandler outputHandler;
 
-    public Minesweeper(GameLevel gameLevel) {
+    public Minesweeper(GameLevel gameLevel, InputHandler inputHandler, OutputHandler outputHandler) {
         gameBoard = new GameBoard(gameLevel);
+        this.inputHandler = inputHandler;
+        this.outputHandler = outputHandler;
+    }
+
+    private int gameStatus = 0; // 0: 게임 중, 1: 승리, -1: 패배
+
+    @Override
+    public void initialize() {
+        gameBoard.initializeGame();
     }
 
     public void run() {
-        consoleOutputHandler.showGameStartComments();
-        gameBoard.initializeGame();
+        outputHandler.showGameStartComments();
 
         while (true) {
             try {
-                consoleOutputHandler.showBoard(gameBoard);
+                outputHandler.showBoard(gameBoard);
                 //화면에 보드를 띄우고 게임이 진행되니 여기 공백으로 구분해주기
                 if (doesUserWinTheGame()) {
-                    consoleOutputHandler.printGameWinningComment();
+                    outputHandler.showGameWinningComment();
                     break;
                 }
                 if (doesUserLoseTheGame()) {
-                    consoleOutputHandler.printGameLosingComment();
+                    outputHandler.showGameLosingComment();
                     break;
                 }
                 //Scanner scanner = new Scanner(System.in); //사용하는 쪽과 가깝게 두기 근데 이러면 반복문 돌 때 마다 새로 다시 생성하게됨. 상수로 빼주기
@@ -39,9 +50,9 @@ public class Minesweeper {
                 actOnCell(cellInput, userActionInput);
 
             } catch (GameException e) {
-                consoleOutputHandler.printExceptionMessage(e);
+                outputHandler.showExceptionMessage(e);
             } catch (Exception e) {
-                consoleOutputHandler.printSimpleMessage("의도치 않은 문제 발생"); //개발자가 의도치않은 시스템 장애 발생1
+                outputHandler.showSimpleMessage("의도치 않은 문제 발생"); //개발자가 의도치않은 시스템 장애 발생1
             }
         }
     }
@@ -93,13 +104,13 @@ public class Minesweeper {
 
     //상수로 뻈으니까 파라미터 개수 줄여주기 복잡도 줄일 수 있다면?
     private String getUserActionInputFromUser() {
-        consoleOutputHandler.printCommentForUserAction();
-        return consoleInputHandler.getUserInput();
+        outputHandler.showCommentForUserAction();
+        return inputHandler.getUserInput();
     }
 
     private String getCellInputFromUser() {
-        consoleOutputHandler.printCommentForSelectingCell();
-        return consoleInputHandler.getUserInput();
+        outputHandler.showCommentForSelectingCell();
+        return inputHandler.getUserInput();
     }
 
     private void checkIfGameIsOver() {
