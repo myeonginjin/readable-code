@@ -1,5 +1,8 @@
 package cleancode.minesweeper.tobe;
 
+import java.util.List;
+import java.util.stream.IntStream;
+
 public class ConsoleOutputHandler {
 
     public void showGameStartComments() {
@@ -9,15 +12,25 @@ public class ConsoleOutputHandler {
     }
 
     public void showBoard(GameBoard board) {
-        System.out.println("   a b c d e f g h i j");
+        String alphabets = generateColAlphabets(board);
+
+        System.out.println("    " + alphabets);
         for (int row = 0; row < board.getRowSize(); row++) {
-            System.out.printf("%d  ", row + 1);
+            System.out.printf("%2d  ", row + 1);
             for (int col = 0; col < board.getColSize(); col++) {
                 System.out.print(board.getSign(row, col) + " ");   //여기서는 객체한테 그려달라는 작업을 부탁하는게 더 이상함 //그리는 책임은 여기서 하는거고. 여기서는 get하는게 맞음 데이터 줘 내가 그릴게
             }
             System.out.println();
         }
         System.out.println();
+    }
+
+    private String generateColAlphabets(GameBoard board) {
+        List<String> alphabets = IntStream.range(0, board.getColSize())
+                .mapToObj(index -> (char) ('a' + index))
+                .map(Object::toString)
+                .toList();
+        return String.join(" ", alphabets);
     }
 
     public void printGameWinningComment() {

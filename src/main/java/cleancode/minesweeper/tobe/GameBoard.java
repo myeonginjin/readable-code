@@ -1,43 +1,50 @@
 package cleancode.minesweeper.tobe;
 
+import cleancode.minesweeper.tobe.cell.*;
+import cleancode.minesweeper.tobe.gameLevel.GameLevel;
+
 import java.util.Arrays;
 import java.util.Random;
 
 public class GameBoard {
 
     private final Cell[][] board;
-    private static final int LAND_MINE_COUNT = 10;
+    private final int landMineCount;
 
-    public GameBoard(int rowSize, int colSize) {
+    public GameBoard(GameLevel gameLevel) {
+        int rowSize = gameLevel.getRowSize();
+        int colSize = gameLevel.getColSize();
         board = new Cell[rowSize][colSize];
+
+        landMineCount = gameLevel.getLanMineCount();
     }
 
     public void initializeGame() {
-        int rowSize = board.length;
-        int colSize = board[0].length;
+        int rowSize = getRowSize();
+        int colSize = getColSize();
 
         for (int row = 0; row < rowSize; row++) {
             for (int col = 0; col < colSize; col++) {
-                board[row][col] = Cell.create();
+                board[row][col] = new EmptyCell();
             }
         }
 
-        for (int i = 0; i < LAND_MINE_COUNT; i++) {
+        for (int i = 0; i < landMineCount; i++) {
             int landMineRow = new Random().nextInt(rowSize);
             int landMineCol = new Random().nextInt(colSize);
-            Cell landMine = findCell(landMineRow, landMineCol);
-            landMine.turnOnLanMine();
+            board[landMineRow][landMineCol] =  new LandMineCell();
         }
 
         for (int row = 0; row < rowSize; row++) {
             for (int col = 0; col < colSize; col++) {
-
                 if (isLandMineCell(row, col)) {  //if문 분기를 조건을 역전시켜서 부정연산자를 사용하지않는 방향으로 바꿔줌
                     continue;
                 }
                 int count = countNearbyMines(row, col);
-                Cell cell = findCell(row, col);
-                cell.updateNearbyLandMineCount(count);
+                if (count == 0) {
+                    continue;
+                }
+                board[row][col] =  new NumberCell(count);
             }
         }
     }

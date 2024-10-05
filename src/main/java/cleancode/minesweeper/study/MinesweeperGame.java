@@ -1,11 +1,13 @@
 package cleancode.minesweeper.study;
 
 import cleancode.minesweeper.tobe.GameException;
-import cleancode.minesweeper.tobe.Cell;
+import cleancode.minesweeper.tobe.cell.Cell;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
+
+/*
 
 public class MinesweeperGame {
 
@@ -132,7 +134,8 @@ public class MinesweeperGame {
     }
 
     private static boolean isAllCellChecked() {
-        /*
+        */
+/*
         boolean isAllOpened = true;
         for (int row = 0; row < BOARD_ROW_SIZE; row++) {
             for (int col = 0; col < BOARD_COL_SIZE; col++) {
@@ -143,12 +146,14 @@ public class MinesweeperGame {
         }
         return isAllOpened;
 
-         */
+         *//*
+
 
         return Arrays.stream(BOARD)
                 .flatMap(Arrays::stream)
                 .allMatch(cell -> cell.isChecked()); //getter로 값을 가져와서 사용하지 않고 예의바르게 객체한테 물어봐
 
+*/
 /*        Stream<String[]> stringArrayStream = Arrays.stream(BOARD);
         Stream<String> stringStream = stringArrayStream.flatMap(stringArray -> {
             Stream<String> stirngStream2 = Arrays.stream(stringArray);
@@ -156,7 +161,8 @@ public class MinesweeperGame {
         });
 
         return stringStream
-                .noneMatch(cell->cell.equals(CLOSED_CELL_SIGN));*/
+                .noneMatch(cell->cell.equals(CLOSED_CELL_SIGN));*//*
+
 
     }
 
@@ -302,4 +308,7 @@ public class MinesweeperGame {
         open(row + 1, col);
         open(row + 1, col + 1);
     }
+
 }
+
+*/
